@@ -1,3 +1,4 @@
+// - to validate email along with other data
 const validator = require("validator");
 // - getting User data from databasse
 const userCollection = require("../db").db().collection("users");
@@ -6,6 +7,7 @@ const bcrypt = require("bcryptjs");
 // - md5
 const md5 = require("md5");
 
+// Initiate a class
 class User {
   constructor(data) {
     this.data = data;
@@ -29,6 +31,7 @@ class User {
        - first, create a salt sync then update the password value to salt
       */
         let salt = bcrypt.genSaltSync(10);
+        //- now overwrite the user password value before insert
         this.data.password = bcrypt.hashSync(this.data.password, salt);
         await userCollection.insertOne(this.data);
         this.getAvatar();
@@ -97,7 +100,7 @@ class User {
           username: this.data.username,
         });
         if (usernameExists) {
-          this.errors.push("Username already Taken ");
+          this.errors.push("Username already Taken !!!");
         }
       }
       // - Only if email is valid then check with database if already taken
@@ -106,16 +109,7 @@ class User {
           email: this.data.email,
         });
         if (emailExists) {
-          this.errors.push("email already exists ");
-        }
-      }
-      // - Only if email is valid then check with database if already taken
-      if (validator.isEmail(this.data.email)) {
-        let emailExists = await userCollection.findOne({
-          email: this.data.email,
-        });
-        if (emailExists) {
-          this.errors.push("email already exists ");
+          this.errors.push("Email already exists !!!");
         }
       }
 
@@ -145,12 +139,13 @@ class User {
           }
         })
         .catch((err) => {
-          reject("something is wrong : Please try again later");
+          reject("Something went wrong : Please try again later");
         });
     });
   }
 
   getAvatar() {
+    /* to get gravatar avatar profiel image : */
     this.avatar = `https://gravatar.com/avatar/${md5(this.data.email)}?128`;
   }
 }
