@@ -1,5 +1,6 @@
 // import models
 const User = require("../models/User");
+const Post = require("../models/Post");
 
 exports.login = (req, res) => {
   let user = new User(req.body);
@@ -12,7 +13,11 @@ exports.login = (req, res) => {
       - but we have to wait for it before redirecting it. so we manually save it 
       -  req.session.save(() => { res.redirect("/");});
       */
-      req.session.user = { avatar: user.avatar, username: user.data.username };
+      req.session.user = {
+        avatar: user.avatar,
+        username: user.data.username,
+        _id: user.data._id,
+      };
       req.session.save(() => {
         res.redirect("/");
       });
@@ -40,7 +45,11 @@ exports.register = (req, res) => {
   user
     .register()
     .then(() => {
-      req.session.user = { username: user.data.username, avatar: user.avatar };
+      req.session.user = {
+        avatar: user.avatar,
+        username: user.data.username,
+        _id: user.data._id,
+      };
       req.session.save(() => {
         res.redirect("/");
       });
@@ -61,14 +70,54 @@ exports.home = (req, res) => {
     /*
    - res.render(name of template to render, data to pass into the template)
     */
-    res.render("home-dashboard", {
-      username: req.session.user.username,
-      avatar: req.session.user.avatar,
-    });
+    res.render("home-dashboard");
   } else {
     res.render("home-guest", {
-      errors: req.flash("errors"), // login error
       regErrors: req.flash("regErrors"), // register errors
     });
   }
+};
+
+exports.mustBeLoggedIn = (req, res, next) => {
+  if (req.session.user) {
+    next();
+  } else {
+    req.flash("errors", "You must be logged in to create a post");
+    req.session.save(() => {
+      res.redirect("/");
+    });
+  }
+};
+
+// * User Profile
+
+exports.ifUserExists = (req, res, next) => {
+  /*
+ check if user typed username exists or not . url/profile/(check this with database)
+ */
+
+  User.findByUsername(req.params.username)
+    .then((userDocument) => {
+      // - create a new property and set it equal to document that we just found
+      req.profileUser = userDocument;
+      next();
+    })
+    .catch(() => {
+      res.render("404");
+    });
+};
+
+exports.profilePostsScreen = (req, res) => {
+  // ask post model for posts by a certain user id
+  Post.findByAuthorId(req.profileUser._id)
+    .then((posts) => {
+      res.render("profile", {
+        posts: posts,
+        profileUsername: req.profileUser.username,
+        profileAvatar: req.profileUser.avatar,
+      });
+    })
+    .catch(() => {
+      res.render("404");
+    });
 };

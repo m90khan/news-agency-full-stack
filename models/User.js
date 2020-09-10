@@ -6,12 +6,19 @@ const userCollection = require("../db").db().collection("users");
 const bcrypt = require("bcryptjs");
 // - md5
 const md5 = require("md5");
+const { get } = require("../router");
 
 // Initiate a class
 class User {
-  constructor(data) {
+  constructor(data, getAvatar) {
     this.data = data;
     this.errors = [];
+    if (getAvatar == undefined) {
+      getAvatar = false;
+    }
+    if (getAvatar) {
+      this.getAvatar();
+    }
   }
 
   //* USER REGISTER
@@ -150,4 +157,36 @@ class User {
   }
 }
 
+// -not taking oop appraoch
+User.findByUsername = (username) => {
+  return new Promise((resolve, reject) => {
+    if (typeof username != "string") {
+      reject();
+      return; // if id does not match : we return. no futher execution
+    }
+
+    userCollection
+      .findOne({ username: username })
+      .then((userDoc) => {
+        if (userDoc) {
+          /* 
+          -clean up the user data 
+          - take the user data from the databse and create a new document  and true to get the avatar*/
+          userDoc = new User(userDoc, true);
+          userDoc = {
+            _id: userDoc.data._id,
+            username: userDoc.data.username,
+            avatar: userDoc.avatar,
+          };
+
+          resolve(userDoc);
+        } else {
+          reject();
+        }
+      })
+      .catch(() => {
+        reject();
+      });
+  });
+};
 module.exports = User;

@@ -78,6 +78,10 @@ const MongoStore = require("connect-mongo")(session);
  */
 const flash = require("connect-flash");
 
+//- to allow html in the post body
+const markdown = require("marked");
+const sanitizeHTML = require("sanitize-html");
+
 const sessionOptions = session({
   secret: "fullstackAPP", // a string that outside could not guess
   // by default, session data is store in memory but we can overwrite to store in database
@@ -90,7 +94,60 @@ const sessionOptions = session({
 
 app.use(sessionOptions);
 app.use(flash());
-app.use(express.urlencoded({ extended: false })); // to allow user submitted form data on req object
+
+/*
+{  username: req.session.user.username, avatar: req.session.user.avatar}
+- remove duplication of session data being passed in every controller
+- create a middlewear 
+- res.locals : an object which will be avaialble in ejs templates
+- we are adding a user property equals to session user property
+
+- the below function tells app to run this fnction for every route, once it sets the property
+- proceed to the next function 
+*/
+app.use((req, res, next) => {
+  //- to allow markdown in ejs templates
+  res.locals.filterUserHTML = (content) => {
+    return sanitizeHTML(markdown(content), {
+      allowedTags: [
+        "p",
+        "br",
+        "ul",
+        "ol",
+        "strong",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "strong",
+        "bold",
+        "i",
+      ],
+      allowedAttributes: {},
+    });
+  };
+
+  //- make all errors and success avaialable in all templates
+  res.locals.errors = req.flash("errors");
+  res.locals.success = req.flash("success");
+
+  // -make current user id avaialbale in req object
+
+  if (req.session.user) {
+    req.visitorId = req.session.user._id;
+  } else {
+    req.visitorId = 0;
+  }
+
+  //- make user session data available in view templates
+  res.locals.user = req.session.user;
+  next();
+});
+
+// - to allow user submitted form data on req object
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json()); // to send json data
 // to allow browser side files.  files that are accessible to everyone
 app.use(express.static("public"));
