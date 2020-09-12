@@ -16,6 +16,9 @@ router.post("/register", userController.register);
 router.post("/login", userController.login);
 // -logout
 router.post("/logout", userController.logout);
+//- Registeration Form validation
+router.post("/doesUsernameExist", userController.doesUsernameExist);
+router.post("/doesEmailExist", userController.doesEmailExist);
 
 // * Profile Related Routes
 // - Profile : if user exists, shared follow profile data, posts screen
