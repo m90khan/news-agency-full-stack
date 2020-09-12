@@ -35,7 +35,7 @@ exports.viewSingle = async (req, res) => {
     also, we do not want to get all the methods from the post but rather only the single method
     */
     let post = await Post.findSingleById(req.params.id, req.visitorId);
-    res.render("single-post-screen", { post: post });
+    res.render("single-post-screen", { post: post, title: post.title });
   } catch {
     res.render("404");
   }
@@ -104,5 +104,15 @@ exports.delete = (req, res) => {
       req.session.save(() => {
         res.redirect(`/`);
       });
+    });
+};
+
+exports.search = (req, res) => {
+  Post.search(req.body.searchTerm)
+    .then((posts) => {
+      res.json(posts);
+    })
+    .catch(() => {
+      res.json([]);
     });
 };

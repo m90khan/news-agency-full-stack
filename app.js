@@ -1,4 +1,13 @@
 /*
+
+
+
+* Focus
+- Code Organization
+- Unique data (user accounts)
+- details (data-validation, security etc)
+
+
 views folder : to keep ejs files/ server side
 public: to eep client/ browser based. css, 
 
@@ -161,4 +170,34 @@ app.set("view engine", "ejs");
 // takes two arguments, (which url to use, router to use)
 app.use("/", router);
 
-module.exports = app;
+/*
+- power server to entertain both socket and app
+*/
+const server = require("http").createServer(app);
+const io = require("socket.io")(server);
+
+//- integrating express session with socket
+io.use((socket, next) => {
+  sessionOptions(socket.request, socket.request.res, next);
+});
+
+io.on("connection", (socket) => {
+  if (socket.request.session.user) {
+    let user = socket.request.session.user;
+    socket.emit("welcome", { username: user.username, avatar: user.avatar });
+    socket.on("chatMessageFromBrowser", (data) => {
+      //- send message to all conencted users
+      // - use io.emit to send to all users. socket.emit to send to the browser that sends that message
+      socket.broadcast.emit("chatMessageFromServer", {
+        message: sanitizeHTML(data.message, {
+          allowedTags: [],
+          allowedAttributes: {},
+        }),
+        username: user.username,
+        avatar: user.avatar,
+      });
+    });
+  }
+});
+
+module.exports = server;

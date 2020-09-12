@@ -6,6 +6,7 @@ const router = express.Router();
 // import all functions for the routes
 const userController = require("./controllers/userController");
 const postController = require("./controllers/postController");
+const followController = require("./controllers/followController");
 //* User Related Routes
 //- homepage (guest / Dashboard)
 router.get("/", userController.home);
@@ -17,11 +18,25 @@ router.post("/login", userController.login);
 router.post("/logout", userController.logout);
 
 // * Profile Related Routes
-// - Profile
+// - Profile : if user exists, shared follow profile data, posts screen
 router.get(
   "/profile/:username",
   userController.ifUserExists,
+  userController.sharedProfileData,
   userController.profilePostsScreen
+);
+router.get(
+  "/profile/:username/followers",
+  userController.ifUserExists,
+  userController.sharedProfileData,
+  userController.profileFollowersScreen
+);
+
+router.get(
+  "/profile/:username/following",
+  userController.ifUserExists,
+  userController.sharedProfileData,
+  userController.profileFollowingScreen
 );
 
 // *  Post related routes
@@ -55,5 +70,21 @@ router.post(
   "/post/:id/delete",
   userController.mustBeLoggedIn,
   postController.delete
+);
+
+// - Search
+
+router.post("/search", postController.search);
+
+//- Follow
+router.post(
+  "/addFollow/:username",
+  userController.mustBeLoggedIn,
+  followController.addFollow
+);
+router.post(
+  "/removeFollow/:username",
+  userController.mustBeLoggedIn,
+  followController.removeFollow
 );
 module.exports = router;

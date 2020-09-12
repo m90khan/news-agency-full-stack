@@ -1,5 +1,6 @@
 // - getting User data from databasse
 const postCollection = require("../db").db().collection("posts");
+const followCollection = require("../db").db().collection("follows");
 
 // - mongo db has a unique way of storing id. pass in single string and it will treat it as special ID obejcts
 const ObjectID = require("mongodb").ObjectID;
@@ -152,6 +153,7 @@ Post.reuseablePostQuery = (uniqueOperations, visitorId) => {
     // clean up author property in each post object so not to get password etc
     posts = posts.map(function (post) {
       post.isVisitorOwner = post.authorId.equals(visitorId);
+
       post.author = {
         username: post.author.username,
         avatar: new User(post.author, true).avatar,
@@ -206,6 +208,48 @@ Post.delete = (postIdToDelete, currentUserId) => {
       reject();
     }
   });
+};
+
+Post.search = (searchTerm) => {
+  return new Promise(async (resolve, reject) => {
+    if (typeof searchTerm == "string") {
+      let posts = await Post.reuseablePostQuery([
+        /*
+        - not doing exact search. instead if databse contain the searched text
+        - so mongodb uses something called indexes
+        */
+        { $match: { $text: { $search: searchTerm } } },
+        { $sort: { score: { $meta: "textScore" } } }, // by score
+      ]);
+      resolve(posts);
+    } else {
+      reject();
+    }
+  });
+};
+
+Post.countPostsByAuthor = (id) => {
+  return new Promise(async (resolve, reject) => {
+    let postCount = await postCollection.countDocuments({ author: id });
+    resolve(postCount);
+  });
+};
+
+Post.getFeed = async (id) => {
+  //- create an array of user Ids that current user follows
+
+  let followedUsers = await followCollection
+    .find({ authorId: new ObjectID(id) })
+    .toArray();
+  followedUsers = followedUsers.map(function (followDoc) {
+    return followDoc.followedId;
+  });
+
+  //-look for post from the above array of followed users by current user
+  return Post.reuseablePostQuery([
+    { $match: { author: { $in: followedUsers } } },
+    { $sort: { createdDate: -1 } },
+  ]);
 };
 
 module.exports = Post;
