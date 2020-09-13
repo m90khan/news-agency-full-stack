@@ -3,6 +3,8 @@ const User = require("../models/User");
 const Post = require("../models/Post");
 const Follow = require("../models/Follow");
 
+const jwt = require("jsonwebtoken");
+
 exports.login = (req, res) => {
   let user = new User(req.body);
   user
@@ -222,3 +224,49 @@ exports.doesEmailExist = async (req, res) => {
   let emailBool = await User.doesEmailExist(req.body.email);
   res.json(emailBool);
 };
+
+// Topic : API Controller
+
+exports.apiLogin = (req, res) => {
+  let user = new User(req.body);
+  user
+    .login()
+    .then((result) => {
+      /*
+      sign({data to store}, secret security phase, options object: expire date )
+      */
+      res.json(
+        jwt.sign({ _id: user.data._id }, process.env.JWTSECRET, {
+          expiresIn: "7d",
+        })
+      );
+    })
+    .catch((err) => {
+      res.json("Sorry: Wrong username or password");
+    });
+};
+
+exports.apiMustBeLoggedIn = (req, res, next) => {
+  try {
+    /*
+      verify(token to verify, jwt secret phrase  )
+      we create apiUser property to store the data
+      */
+    req.apiUser = jwt.verify(req.body.token, process.env.JWTSECRET);
+    next();
+  } catch {
+    res.json("Sorry: you must provide valid token");
+  }
+};
+
+exports.apiGetPostsByUsername = async (req, res) => {
+  try {
+    let authorDoc = await User.findByUsername(req.params.username);
+    let posts = await Post.findByAuthorId(authorDoc._id);
+    res.json(posts);
+  } catch {
+    res.json("Sory: invalid User requested");
+  }
+};
+
+// "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1ZjU4ZjU5ZDAyZmY2NTNiMTg5YWQyMjUiLCJpYXQiOjE1OTk5NzczNjYsImV4cCI6MTYwMDU4MjE2Nn0.ME7wThwvGyZcbY9H6RjPkyL9-1NqD8fGD0SiqcyblmM"

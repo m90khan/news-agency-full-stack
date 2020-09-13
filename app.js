@@ -61,12 +61,27 @@ public: to eep client/ browser based. css,
     - to validate string data like email, numeric , alphanumeric 
     "validator": "^13.1.1"    
 
+
+  Topic: Cookie Valnerability : Preventing CSRF
+  - Cross Site Reuest Forgery: 
+  The attacker does not have access to the app but can attack the url in form submission etc because
+  of cookies. as user is already logged in and has a cookie session in the browser. 
+  doing so, the attacker can attack using hidden fieels. 
+  * Solution: to avoid csrf attacks, we add a hidden field using csrf package to avoid attacks
+  - now the attacker will not be able to attack because of hidden string sent along when creating post
+  - as he will not have access to it from outside
+
+Topic: JSON Web Tokens
+to handle authentication for API
+
 */
 
 // use express to create a server
 const express = require("express");
 // use express router to create a router for all the routes
 const router = require("./router");
+// - impemet csrf
+const csrf = require("csurf");
 // initialize the server
 const app = express();
 // * to store session into brower as cookie
@@ -91,6 +106,15 @@ const flash = require("connect-flash");
 const markdown = require("marked");
 const sanitizeHTML = require("sanitize-html");
 
+// - to allow user submitted form data on req object
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json()); // to send json data
+/*
+- create APi routes
+*/
+app.use("/api", require("./router-api"));
+
+//- sessions
 const sessionOptions = session({
   secret: "fullstackAPP", // a string that outside could not guess
   // by default, session data is store in memory but we can overwrite to store in database
@@ -155,9 +179,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// - to allow user submitted form data on req object
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json()); // to send json data
 // to allow browser side files.  files that are accessible to everyone
 app.use(express.static("public"));
 
@@ -166,8 +187,27 @@ app.use(express.static("public"));
 app.set("views", "views");
 app.set("view engine", "ejs");
 
+//- avoid csrf attacks
+app.use(csrf());
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken();
+  next();
+});
+app.use((err, req, res, next) => {
+  if (err) {
+    if (err.code == "EBADCSRFTOKEN") {
+      req.flash("errors", "Cross Site request forgery detected");
+      req.session.save(() => {
+        res.redirect("/");
+      });
+    } else {
+      res.render("404");
+    }
+  }
+});
 // to tell express to use router for routes
 // takes two arguments, (which url to use, router to use)
+
 app.use("/", router);
 
 /*

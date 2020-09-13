@@ -116,3 +116,27 @@ exports.search = (req, res) => {
       res.json([]);
     });
 };
+
+// Topic: API Controller
+
+exports.apiCreate = (req, res) => {
+  let post = new Post(req.body, req.apiUser._id);
+  post
+    .create()
+    .then((newId) => {
+      res.json("Post created successfully");
+    })
+    .catch((errors) => {
+      res.json(errors);
+    });
+};
+
+exports.apiDelete = (req, res) => {
+  Post.delete(req.params.id, req.apiUser._id)
+    .then(() => {
+      res.json("Post deleted successfully");
+    })
+    .catch((errors) => {
+      res.json(errors);
+    });
+};
